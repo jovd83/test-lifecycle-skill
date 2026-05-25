@@ -1,0 +1,68 @@
+name: Validate Skill
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate Agent Skill repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate required files
+        run: |
+          echo "Checking required skill files..."
+          test -f SKILL.md     || (echo "SKILL.md missing" && exit 1)
+          test -f README.md    || (echo "README.md missing" && exit 1)
+          test -f CHANGELOG.md || (echo "CHANGELOG.md missing" && exit 1)
+          echo "All required files present."
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          echo "Checking SKILL.md frontmatter fields..."
+          grep -q "^name:" SKILL.md        || (echo "name field missing in SKILL.md" && exit 1)
+          grep -q "^description:" SKILL.md || (echo "description field missing in SKILL.md" && exit 1)
+          grep -q "^metadata:" SKILL.md    || (echo "metadata block missing in SKILL.md" && exit 1)
+          echo "SKILL.md frontmatter OK."
+
+      - name: Validate referenced docs exist
+        run: |
+          echo "Checking referenced bundle files..."
+          for f in \
+            references/phase-map.md \
+            references/workspace-layout.md \
+            references/hitl-gate-protocol.md \
+            references/heal-loop-control.md \
+            references/parallel-9a-9b.md \
+            references/final-report-template.md \
+            assets/paused-gate-template.md \
+            assets/state-template.json \
+            scripts/init_run.py \
+            scripts/check_exit_criteria.py \
+            scripts/compile_report.py
+          do
+            test -f "$f" || (echo "Missing referenced file: $f" && exit 1)
+          done
+          echo "All referenced files present."
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Syntax-check Python scripts
+        run: |
+          echo "Compiling scripts/*.py..."
+          python -m compileall -q scripts
+          echo "Python scripts compile cleanly."

@@ -1,0 +1,339 @@
+{
+  "schema_version": "1.0",
+  "chain_name": "test-lifecycle",
+  "owner_skill": "test-lifecycle-skill",
+  "generated_at": "2026-05-25",
+  "notes": "Single source of truth for the 13-phase test lifecycle chain. The orchestrator and validators read this file. Prose in SKILL.md and references/*.md must stay aligned with this JSON; the validator script checks for drift.",
+  "phases": [
+    {
+      "id": "1",
+      "ordinal": 1,
+      "name": "Intake",
+      "inline": true,
+      "intent": null,
+      "default_skill": null,
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["user_prompt", "codebase_path?"],
+      "outputs": ["phase-01-intake/intake.md", "state.json (populated)"],
+      "required_state_fields": ["sut.id", "sut.type", "risk_class_hint", "hitl_mode_hint", "environments"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "1b",
+      "ordinal": 2,
+      "name": "HITL Controls Design",
+      "inline": false,
+      "intent": "design_hitl_controls",
+      "default_skill": "eu-ai-act-hitl-oversight-skill",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-01-intake/intake.md", "state.risk_class"],
+      "outputs": ["phase-01b-hitl/policy.md", "state.mode (set)"],
+      "mismatch_rule": "If mode=lite AND risk_class=critical, refuse to auto-proceed without explicit human override.",
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "2",
+      "ordinal": 3,
+      "name": "AC Normalization",
+      "inline": false,
+      "intent": "normalize_acceptance_criteria",
+      "default_skill": "acceptance-criteria-designer",
+      "skip_condition": "intake supplied clean ACs with stable IDs",
+      "parallel_with": null,
+      "inputs": ["intake.ACs", "intake.story_link"],
+      "outputs": ["phase-02-ac/ac.md", "phase-02-ac/ac.json"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "3",
+      "ordinal": 4,
+      "name": "Test Analysis",
+      "inline": false,
+      "intent": "analyze_requirements_for_testability",
+      "default_skill": "test-analysis-skill",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-02-ac/ac.json", "phase-01-intake/intake.md"],
+      "outputs": ["phase-03-analysis/analysis.md", "phase-03-analysis/risks.json"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "4",
+      "ordinal": 5,
+      "name": "Test Strategy",
+      "inline": false,
+      "intent": "design_test_strategy",
+      "default_skill": "test-strategy-skill",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-01-intake/intake.md", "phase-01b-hitl/policy.md", "phase-02-ac/ac.json", "phase-03-analysis/risks.json"],
+      "outputs": ["phase-04-strategy/strategy.md", "phase-04-strategy/strategy.json"],
+      "load_bearing_output": "phase-04-strategy/strategy.json",
+      "gate_after": { "lite": false, "standard": true, "full": true },
+      "gate_name": "phase-4-strategy-approval"
+    },
+    {
+      "id": "5",
+      "ordinal": 6,
+      "name": "Test Design",
+      "inline": false,
+      "intent": "generate_structured_test_cases",
+      "default_skill": "test-design-orchestrator",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-02-ac/ac.json", "phase-04-strategy/strategy.json"],
+      "outputs": ["phase-05-design/cases/<scenario-id>.md"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "6",
+      "ordinal": 7,
+      "name": "Case Quality Gate",
+      "inline": false,
+      "intent": "review_test_cases",
+      "default_skill": "tss-test-case-reviewer",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-05-design/cases/"],
+      "outputs": ["phase-06-quality/review.md"],
+      "inline_mini_loop": "route failing cases back to phase 5 (max 2 rewrites per case before escalating)",
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "7",
+      "ordinal": 8,
+      "name": "Test Data Prep",
+      "inline": false,
+      "intent": "generate_synthetic_data",
+      "default_skill": "lifelike-synthetic-data-generator",
+      "skip_condition": "strategy.json.test_data.synthetic_required == false",
+      "parallel_with": null,
+      "inputs": ["phase-04-strategy/strategy.json (test_data section)"],
+      "outputs": ["phase-07-data/"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "8",
+      "ordinal": 9,
+      "name": "Artifact Export",
+      "inline": false,
+      "intent": "render_test_artifact",
+      "default_skill": "test-artifact-export-skill",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-05-design/cases/ (after phase-6 approval)", "intake.target_format"],
+      "outputs": ["phase-08-export/"],
+      "gate_after": { "lite": false, "standard": true, "full": true },
+      "gate_name": "phase-8-export-approval"
+    },
+    {
+      "id": "9a",
+      "ordinal": 10,
+      "name": "Automation Lanes",
+      "inline": false,
+      "intent": null,
+      "default_skill": null,
+      "lane_dispatched": true,
+      "skip_condition": "no scenarios route to this lane in strategy.json.lanes",
+      "parallel_with": "9b",
+      "lane_catalog_ref": "test-strategy-skill/references/lane-catalog.md",
+      "lane_dispatch_intents": {
+        "stack-aware-unit-testing-skill": "run_stack_aware_unit_tests",
+        "junit5-skill": "run_junit5_tests",
+        "restassured-skill": "run_restassured_tests",
+        "api-contract-sentinel": "detect_contract_drift",
+        "openapi-spec-generation": "generate_openapi_spec",
+        "playwright-skill": "run_playwright_e2e",
+        "cypress-skill": "run_cypress_e2e",
+        "responsive-testing": "run_responsive_tests",
+        "a11y-audit-agent-skill": "run_a11y_audit",
+        "performance-testing-skill": "run_perf_tests",
+        "defensive-appsec-review-skill": "run_appsec_review",
+        "data-batch-testing-skill": "run_data_batch_tests",
+        "llm-eval-skill": "run_llm_evals"
+      },
+      "inputs": ["phase-04-strategy/strategy.json (lanes + scenarios)", "phase-08-export/ (approved cases)"],
+      "outputs": ["phase-10-results/lane-<name>/results.json"],
+      "gate_after": { "lite": false, "standard": false, "full": "per-lane-on-critical-finding" },
+      "gate_name": "phase-9-lane-<name>-critical (full mode only)"
+    },
+    {
+      "id": "9b",
+      "ordinal": 11,
+      "name": "Manual Track",
+      "inline": true,
+      "intent": null,
+      "default_skill": null,
+      "skip_condition": "strategy.json.routing.manual is empty (but the orchestrator still emits an empty checklist)",
+      "parallel_with": "9a",
+      "inputs": ["phase-04-strategy/strategy.json (routing.manual)", "phase-05-design/cases/"],
+      "outputs": ["phase-09b-manual/checklist.md", "phase-09b-manual/results.json (filled by human)"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "10",
+      "ordinal": 12,
+      "name": "Execution",
+      "inline": true,
+      "intent": null,
+      "default_skill": null,
+      "skip_condition": null,
+      "parallel_with": null,
+      "note": "Runs inside each phase-9a lane. Orchestrator aggregates after all lanes complete (or pause).",
+      "inputs": ["per-lane execution"],
+      "outputs": ["phase-10-results/aggregated.json"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "11",
+      "ordinal": 13,
+      "name": "Functional Review",
+      "inline": false,
+      "intent": "review_automation_quality",
+      "default_skill": "automated-test-reviewer",
+      "skip_condition": null,
+      "parallel_with": null,
+      "inputs": ["phase-04-strategy/strategy.json", "phase-10-results/aggregated.json", "phase-09b-manual/results.json"],
+      "outputs": ["phase-11-review/review.md"],
+      "gate_after": { "lite": false, "standard": false, "full": false }
+    },
+    {
+      "id": "12",
+      "ordinal": 14,
+      "name": "Heal Loop",
+      "inline": true,
+      "intent": null,
+      "default_skill": null,
+      "skip_condition": "exit criteria met at first pass",
+      "parallel_with": null,
+      "algorithm_ref": "references/heal-loop-control.md",
+      "uses_script": "scripts/check_exit_criteria.py",
+      "inputs": ["phase-04-strategy/strategy.json.exit_criteria", "phase-10-results/aggregated.json", "phase-11-review/review.md"],
+      "outputs": ["phase-12-heal/iter-<N>.md"],
+      "gate_after": { "lite": false, "standard": false, "full": "on-cap-or-definition-changing-fix" },
+      "gate_name": "phase-12-heal-decision (full mode only)"
+    },
+    {
+      "id": "13",
+      "ordinal": 15,
+      "name": "Final Report",
+      "inline": true,
+      "intent": null,
+      "default_skill": null,
+      "skip_condition": null,
+      "parallel_with": null,
+      "uses_script": "scripts/compile_report.py",
+      "template_ref": "references/final-report-template.md",
+      "inputs": ["state.json", "all prior phase artifacts", "audit-log.jsonl"],
+      "outputs": ["phase-13-report/report.md", "phase-13-report/report.json"],
+      "gate_after": { "lite": true, "standard": true, "full": true },
+      "gate_name": "phase-13-final-signoff"
+    }
+  ],
+  "modes": {
+    "lite": {
+      "bursts": [
+        {
+          "phases": ["1", "1b", "2", "3", "4", "5", "6", "7", "8", "9a", "9b", "10", "11", "12"],
+          "ends_with_gate": "phase-13-final-signoff"
+        },
+        { "phases": ["13"], "ends_with_gate": null }
+      ],
+      "heal_cap": 2,
+      "active_gates": ["phase-13-final-signoff"],
+      "audit_trail_required": false,
+      "mode_risk_pairings": {
+        "low": "ok",
+        "medium": "ok",
+        "high": "warn",
+        "critical": "block"
+      }
+    },
+    "standard": {
+      "bursts": [
+        { "phases": ["1", "1b", "2", "3", "4"], "ends_with_gate": "phase-4-strategy-approval" },
+        { "phases": ["5", "6", "7", "8"], "ends_with_gate": "phase-8-export-approval" },
+        { "phases": ["9a", "9b", "10", "11", "12"], "ends_with_gate": "phase-13-final-signoff" },
+        { "phases": ["13"], "ends_with_gate": null }
+      ],
+      "heal_cap": 4,
+      "active_gates": ["phase-4-strategy-approval", "phase-8-export-approval", "phase-13-final-signoff"],
+      "audit_trail_required": false,
+      "mode_risk_pairings": {
+        "low": "ok",
+        "medium": "ok",
+        "high": "ok",
+        "critical": "warn"
+      }
+    },
+    "full": {
+      "bursts": [
+        { "phases": ["1", "1b", "2", "3", "4"], "ends_with_gate": "phase-4-strategy-approval" },
+        { "phases": ["5", "6", "7", "8"], "ends_with_gate": "phase-8-export-approval" },
+        { "phases": ["9a", "9b", "10", "11"], "ends_with_gate": "phase-12-heal-decision (conditional)" },
+        { "phases": ["12"], "ends_with_gate": "phase-13-final-signoff" },
+        { "phases": ["13"], "ends_with_gate": null }
+      ],
+      "heal_cap": 6,
+      "active_gates": ["phase-4-strategy-approval", "phase-8-export-approval", "phase-9-lane-critical", "phase-12-heal-decision", "phase-13-final-signoff"],
+      "audit_trail_required": true,
+      "mode_risk_pairings": {
+        "low": "over-engineered",
+        "medium": "over-engineered",
+        "high": "ok",
+        "critical": "ok"
+      }
+    }
+  },
+  "gates": {
+    "phase-4-strategy-approval": {
+      "phase": "4",
+      "modes_active": ["standard", "full"],
+      "approver_role": { "standard": "QA lead", "full": "QA lead + Security" },
+      "what_is_approved": "The phase-4 strategy document (scope, levels, types, lanes, exit criteria, mode/risk pairing)."
+    },
+    "phase-8-export-approval": {
+      "phase": "8",
+      "modes_active": ["standard", "full"],
+      "approver_role": { "standard": "QA lead", "full": "QA lead" },
+      "what_is_approved": "The exported test artifacts before automation cost is paid."
+    },
+    "phase-9-lane-critical": {
+      "phase": "9a",
+      "modes_active": ["full"],
+      "approver_role": { "full": "Lane owner" },
+      "what_is_approved": "Mid-execution Critical finding in a single lane. Other lanes continue.",
+      "scope": "per-lane"
+    },
+    "phase-12-heal-decision": {
+      "phase": "12",
+      "modes_active": ["full"],
+      "approver_role": { "full": "QA lead" },
+      "what_is_approved": "Heal-loop iteration cap reached OR fix requires changing a stored phase-8 case definition."
+    },
+    "phase-13-final-signoff": {
+      "phase": "13",
+      "modes_active": ["lite", "standard", "full"],
+      "approver_role": {
+        "lite": "Owner / QA lead",
+        "standard": "Product owner",
+        "full": "Product owner + Compliance"
+      },
+      "what_is_approved": "The final report and residual risk posture."
+    }
+  },
+  "exit_criteria_ref": {
+    "owner_skill": "test-strategy-skill",
+    "computed_by_script": "test-strategy-skill/scripts/derive_exit_criteria.py",
+    "evaluated_by_script": "test-lifecycle-skill/scripts/check_exit_criteria.py",
+    "note": "The strategy skill writes exit_criteria into strategy.json. The lifecycle skill reads it and evaluates against phase-10 aggregated.json each heal-loop iteration."
+  },
+  "lane_catalog_ref": {
+    "owner_skill": "test-strategy-skill",
+    "path": "test-strategy-skill/references/lane-catalog.md",
+    "detector_script": "test-strategy-skill/scripts/detect_lanes.py",
+    "note": "The full type-to-lane mapping lives in test-strategy-skill. This chain.json's lane_dispatch_intents (phase 9a) names the runtime intents; the lane catalog handles type-to-lane selection."
+  }
+}

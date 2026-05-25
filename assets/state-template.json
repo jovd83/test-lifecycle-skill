@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "run_id": null,
+  "started_at": null,
+  "codebase_path": null,
+  "current_phase": 1,
+  "current_phase_status": "in-progress",
+  "mode": null,
+  "risk_class": null,
+  "sut": {
+    "id": null,
+    "type": null,
+    "summary": null
+  },
+  "exit_criteria": null,
+  "heal_cap": null,
+  "heal_iterations": 0,
+  "gates_resolved": [],
+  "gates_pending": [],
+  "audit_log_path": "audit-log.jsonl",
+  "phase_artifacts": {
+    "phase-01-intake": null,
+    "phase-01b-hitl": null,
+    "phase-02-ac": null,
+    "phase-03-analysis": null,
+    "phase-04-strategy": null,
+    "phase-05-design": null,
+    "phase-06-quality": null,
+    "phase-07-data": null,
+    "phase-08-export": null,
+    "phase-09b-manual": null,
+    "phase-10-results": null,
+    "phase-11-review": null,
+    "phase-12-heal": null,
+    "phase-13-report": null
+  }
+}
