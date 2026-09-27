@@ -1,0 +1,154 @@
+{
+  "_comment": "Chain for test-lifecycle-skill. 13-phase test lifecycle from intake through signed-off final report. Conditional phases (AC normalization, test data prep) self-gate via query_suffix per the bug-fix-lifecycle pattern. HITL gates fire after phases 4, 8, 12, and 13. The orchestrator's richer mode-aware behavior (lite/standard/full burst boundaries, mode-aware gate skipping) is governed by assets/chain.json; this file is the canonical AgentOS chain registry view.",
+  "chain_name": "test-lifecycle-skill",
+  "description": "Intake -> HITL design -> AC normalization -> test analysis -> test strategy -> test design -> case quality gate -> test data prep -> artifact export -> automation lanes + manual track (parallel) -> execution -> functional review -> heal loop -> final report",
+  "phases": [
+    {
+      "id": "intake",
+      "name": "Phase 1 - Gather structured intake (SUT, risk class, mode hint, environments)",
+      "skill": null,
+      "intent": "gather_test_lifecycle_intake",
+      "reason": "Establish SUT identity, risk class, HITL mode hint, environments, and available inputs. Drives every downstream decision.",
+      "risk": "low",
+      "pass_context_forward": true,
+      "query_suffix": "Write phase-01-intake/intake.md with: SUT id and type (requirement/feature/webapp/UI/batch/API/library/ml-model), risk class (low/medium/high/critical), HITL mode hint (lite/standard/full), environments, acceptance criteria (if inlined), constraints. If risk class or SUT type cannot be inferred, stop and ask.",
+      "_note": "Agent-handled inline."
+    },
+    {
+      "id": "hitl_design",
+      "name": "Phase 1b - Design HITL oversight controls and confirm mode",
+      "skill": "eu-ai-act-hitl-oversight-skill",
+      "intent": "design_hitl_controls",
+      "reason": "Produce the HITL policy document and confirm the mode (lite/standard/full). Refuses critical+lite without explicit human override.",
+      "risk": "medium",
+      "pass_context_forward": true
+    },
+    {
+      "id": "ac_normalization",
+      "name": "Phase 2 - Normalize acceptance criteria",
+      "skill": "acceptance-criteria-designer",
+      "intent": "normalize_acceptance_criteria",
+      "reason": "Produce a clean AC list with stable IDs that downstream phases can cite as drivers.",
+      "risk": "low",
+      "pass_context_forward": true,
+      "query_suffix": "Read phase-01-intake/intake.md. If the intake already supplied clean ACs with stable IDs, state exactly: 'AC normalization: not applicable - intake supplied clean ACs' and stop. Otherwise normalize the AC list and write phase-02-ac/ac.md + phase-02-ac/ac.json."
+    },
+    {
+      "id": "test_analysis",
+      "name": "Phase 3 - Analyze requirements for testability and risk",
+      "skill": "test-analysis-skill",
+      "intent": "analyze_requirements_for_testability",
+      "reason": "Surface testability gaps, ambiguity, and risk findings that drive the strategy.",
+      "risk": "low",
+      "pass_context_forward": true
+    },
+    {
+      "id": "test_strategy",
+      "name": "Phase 4 - Design test strategy (levels, types, lanes, exit criteria)",
+      "skill": "test-strategy-skill",
+      "intent": "design_test_strategy",
+      "reason": "Produce the load-bearing strategy.md + strategy.json that every later phase reads.",
+      "risk": "medium",
+      "pass_context_forward": true,
+      "on_phase_complete": "hitl",
+      "_hitl_note": "Standard and full modes pause for human approval of the strategy doc. Lite mode auto-proceeds. The orchestrator checks state.json.mode and skips the gate when mode=lite."
+    },
+    {
+      "id": "test_design",
+      "name": "Phase 5 - Generate structured test cases per scenario",
+      "skill": "test-design-orchestrator",
+      "intent": "generate_structured_test_cases",
+      "reason": "Apply the best black-box technique per scenario and produce one case file per scenario in strategy.json.",
+      "risk": "medium",
+      "pass_context_forward": true
+    },
+    {
+      "id": "case_quality_gate",
+      "name": "Phase 6 - Review test case quality",
+      "skill": "test-case-reviewer",
+      "intent": "review_test_cases",
+      "reason": "Quality gate before automation cost is paid. Failing cases route back to phase 5 (max 2 rewrites per case).",
+      "risk": "low",
+      "pass_context_forward": true
+    },
+    {
+      "id": "test_data_prep",
+      "name": "Phase 7 - Generate synthetic test data (if required)",
+      "skill": "lifelike-synthetic-data-generator",
+      "intent": "generate_synthetic_data",
+      "reason": "Produce realistic, locale-aware fixtures matching the strategy's test_data section.",
+      "risk": "low",
+      "pass_context_forward": true,
+      "query_suffix": "Read phase-04-strategy/strategy.json. If strategy.test_data.synthetic_required is false, state exactly: 'test data prep: not applicable - strategy does not require synthetic data' and stop. Otherwise generate the synthetic data per the strategy's fixture_notes."
+    },
+    {
+      "id": "artifact_export",
+      "name": "Phase 8 - Export designed cases to target format (Gherkin/Xray/TestRail)",
+      "skill": "test-management-sync",
+      "intent": "render_test_artifact",
+      "reason": "Render approved test cases to the format chosen in the strategy (or inferred from intake).",
+      "risk": "low",
+      "pass_context_forward": true,
+      "on_phase_complete": "hitl",
+      "_hitl_note": "Standard and full modes pause for human approval of exported artifacts before automation cost is paid. Lite mode auto-proceeds. The orchestrator checks state.json.mode and skips when mode=lite."
+    },
+    {
+      "id": "automation_lanes",
+      "name": "Phase 9a - Dispatch automation lanes in parallel (per strategy.json.lanes)",
+      "skill": null,
+      "intent": "dispatch_automation_lanes",
+      "reason": "Fan out to each lane skill named in strategy.json.lanes where availability=available and routing=automated. Runs lanes in parallel; each writes results to phase-10-results/lane-<name>/.",
+      "risk": "high",
+      "pass_context_forward": true,
+      "query_suffix": "Read phase-04-strategy/strategy.json. For each entry in lanes[] where availability=available and routing=automated, dispatch the lane's intent (see assets/chain.json.lane_dispatch_intents for the per-lane intent map). Aggregate all lane results into phase-10-results/aggregated.json. In full mode: if any lane surfaces a Critical-severity finding, pause that lane (write gates/PAUSED-PHASE-09-lane-<name>-critical.md) but let other lanes continue. In standard/lite mode: Critical findings are logged but lanes continue.",
+      "_note": "Agent-handled fan-out using the orchestrator's lane dispatch logic. Runs in parallel with phase 9b."
+    },
+    {
+      "id": "manual_track",
+      "name": "Phase 9b - Generate manual execution checklist (parallel to 9a)",
+      "skill": null,
+      "intent": "generate_manual_checklist",
+      "reason": "Produce the human-executable checklist for scenarios routed to the manual track (exploratory, UAT, OAT, doc review, usability).",
+      "risk": "medium",
+      "pass_context_forward": true,
+      "query_suffix": "Read strategy.json.routing.manual. For each manual scenario, look up the designed case from phase-05-design/cases/ and write a checklist entry in phase-09b-manual/checklist.md. Write phase-09b-manual/results.json as [] for the human to fill in. Even when the manual list is empty, write the file with a note ('No manual cases routed') so the audit trail records the explicit absence. Do NOT execute manual cases - this phase only produces the checklist and waits.",
+      "_note": "Agent-handled. Runs in parallel with phase 9a."
+    },
+    {
+      "id": "functional_review",
+      "name": "Phase 11 - Functional review: map strategy scenarios to executed scripts",
+      "skill": "automated-test-reviewer",
+      "intent": "review_automation_quality",
+      "reason": "Map strategy.scenarios -> executed scripts -> results. Surface coverage gaps and false greens. Integrate manual-track results.",
+      "risk": "medium",
+      "pass_context_forward": true,
+      "query_suffix": "Wait until all non-paused lanes in phase-10-results/ have completed AND phase-09b-manual/results.json is filled in (or is explicitly []). If 9b results are missing, write a clear 'waiting for manual results' note and stop. Produce phase-11-review/review.md mapping each strategy scenario to: automated-passed | manual-passed | failed | uncovered."
+    },
+    {
+      "id": "heal_loop",
+      "name": "Phase 12 - Heal loop: evaluate exit criteria; iterate on failures",
+      "skill": null,
+      "intent": "run_heal_loop",
+      "reason": "Use scripts/check_exit_criteria.py to evaluate strategy exit criteria against aggregated results. If passing, proceed to phase 13. If failing and iter < heal_cap, triage each failure (real bug / flaky / wrong assertion / env issue), apply fix, re-run affected lane. If cap reached or fix requires definition change: full mode pauses at gate 12, standard/lite logs and stops.",
+      "risk": "high",
+      "pass_context_forward": true,
+      "query_suffix": "Run: python scripts/check_exit_criteria.py --strategy phase-04-strategy/strategy.json --results phase-10-results/aggregated.json --json. If passed=true, write phase-12-heal/iter-<N>.md with status=exit-criteria-met and proceed. Else: classify each failure per references/heal-loop-control.md, apply the fix (re-running affected lanes via phase 9a), log to phase-12-heal/iter-<N>.md. Do not modify phase-8 artifacts without HITL approval. Respect the heal_cap from state.json.",
+      "on_phase_complete": "hitl",
+      "_hitl_note": "Full mode pauses when: heal cap reached without exit criteria met, OR a proposed fix requires changing a stored phase-8 case definition. Standard and lite modes auto-stop with residual risk documented. The orchestrator checks mode + heal-loop outcome and only writes gates/PAUSED-PHASE-12-* when mode=full AND a pause condition is hit.",
+      "_note": "Agent-handled with deterministic exit-criteria check."
+    },
+    {
+      "id": "final_report",
+      "name": "Phase 13 - Compile final report with traceability matrix and HITL audit trail",
+      "skill": null,
+      "intent": "compile_final_report",
+      "reason": "Assemble report.md + report.json from all phase artifacts with traceability matrix (requirement -> AC -> scenario -> script -> result), per-lane summary, manual track summary, heal loop log, HITL audit trail, residual risks, and strategy adherence.",
+      "risk": "low",
+      "pass_context_forward": false,
+      "query_suffix": "Run: python scripts/compile_report.py --workspace <run-dir>. Verify the produced report.md and report.json against references/final-report-template.md. The posture (green / green-with-caveats / residual-risk / blocked) must be set by the script based on exit_criteria_outcome and findings_by_severity. Distinguish 'done (exit criteria met)' from 'stopped at cap' explicitly in the executive summary.",
+      "on_phase_complete": "hitl",
+      "_hitl_note": "All modes pause for final sign-off on the report. Sign-off identity and timestamp are appended to audit-log.jsonl and embedded in report.json.signoff.",
+      "_note": "Agent-handled with the compile_report script."
+    }
+  ]
+}
