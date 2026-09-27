@@ -39,9 +39,7 @@ Orchestrate a software change through 13 phases of disciplined testing — from 
 - Do not run end-to-end on production environments without the explicit env target coming from phase-4 strategy.
 - Do not create persistent shared-memory behavior. Per-run state lives in the workspace; project-wide policy belongs in an external shared-memory skill.
 
-## Dispatcher Integration
-
-Use `skill-dispatcher` as the primary integration layer. Prefer dispatching by intent; treat direct skill paths as fallback only when the dispatcher has no registry match.
+## Phase Map
 
 Phase → intent mapping (full table in [references/phase-map.md](references/phase-map.md)):
 
