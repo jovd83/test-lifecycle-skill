@@ -53,7 +53,7 @@ Phase → intent mapping (full table in [references/phase-map.md](references/pha
 | 5 Test Design | `generate_structured_test_cases` | `test-design-orchestrator` |
 | 6 Case Quality Gate | `review_test_cases` | `test-case-reviewer` |
 | 7 Test Data (skip-if not needed) | `generate_synthetic_data` | `lifelike-synthetic-data-generator` |
-| 8 Artifact Export | `render_test_artifact` | `test-artifact-export-skill` |
+| 8 Artifact Export | `render_test_artifact` | `test-management-sync` |
 | 9a Automation lanes | per lane intent (from phase-4 strategy.lanes) | per lane (e.g. `playwright-skill`) |
 | 9b Manual track | (inline — produce manual execution checklist) | n/a |
 | 10 Execution | (per lane, runs inside 9a) | n/a |

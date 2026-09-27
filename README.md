@@ -202,7 +202,7 @@ This skill dispatches to (and therefore depends on) these phase skills:
 | 5 | `test-design-orchestrator` | available |
 | 6 | `test-case-reviewer` | available |
 | 7 | `lifelike-synthetic-data-generator` | available |
-| 8 | `test-artifact-export-skill` | available |
+| 8 | `test-management-sync` | available |
 | 9a | per-lane skills | mostly available |
 | 11 | `automated-test-reviewer` | available |
 

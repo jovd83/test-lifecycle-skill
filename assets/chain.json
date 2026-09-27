@@ -120,7 +120,7 @@
       "name": "Artifact Export",
       "inline": false,
       "intent": "render_test_artifact",
-      "default_skill": "test-artifact-export-skill",
+      "default_skill": "test-management-sync",
       "skip_condition": null,
       "parallel_with": null,
       "inputs": ["phase-05-design/cases/ (after phase-6 approval)", "intake.target_format"],

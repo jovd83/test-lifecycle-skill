@@ -24,7 +24,7 @@ full     : [1, 1b, 2, 3, 4]  →  gate 4  →  [5, 6, 7, 8]  →  gate 8  →  [
 | 5 | Test Design | `generate_structured_test_cases` | `test-design-orchestrator` | never | no |
 | 6 | Case Quality Gate | `review_test_cases` | `test-case-reviewer` | never | inline mini-loop only |
 | 7 | Test Data Prep | `generate_synthetic_data` | `lifelike-synthetic-data-generator` | `strategy.json.test_data.synthetic_required == false` | no |
-| 8 | Artifact Export | `render_test_artifact` | `test-artifact-export-skill` | never | **standard, full** |
+| 8 | Artifact Export | `render_test_artifact` | `test-management-sync` | never | **standard, full** |
 | 9a | Automation Lanes | per-lane intent | per-lane skill | per lane, if no scenarios route to it | **full only, per lane on Critical** |
 | 9b | Manual Track | inline | — | `strategy.json.routing.manual` is empty | no |
 | 10 | Execution | (inside 9a) | (inside lane skill) | never | no |
@@ -98,7 +98,7 @@ full     : [1, 1b, 2, 3, 4]  →  gate 4  →  [5, 6, 7, 8]  →  gate 8  →  [
 ### 8. Artifact Export
 
 **Intent:** `render_test_artifact`
-**Dispatches to:** `test-artifact-export-skill`
+**Dispatches to:** `test-management-sync`
 **Inputs:** approved cases from phase 6 + target format from intake/strategy.
 **Outputs:** `phase-08-export/` (Gherkin / Xray-import / TestRail-import).
 **Gate after:** standard + full modes pause for export approval.
