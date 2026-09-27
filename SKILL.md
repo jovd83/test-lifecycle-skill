@@ -1,6 +1,7 @@
 ---
 name: test-lifecycle-skill
 description: Use when the user wants end-to-end testing for a change — running a requirement, feature, webapp, UI, batch job, API, or release through the full 13-phase lifecycle (intake → HITL design → analysis → strategy → design → quality gate → data prep → export → automation + manual track in parallel → execution → functional review → heal loop → final report). Dispatches to phase-specific skills and pauses at HITL gates for approval. Use whenever the user asks to "test this end-to-end", "plan and execute testing", "run the test chain", or "deliver a verified, documented test pass". Do not use for one-off planning (use test-strategy-skill) or one-off case design (use test-design-orchestrator).
+disable-model-invocation: true
 metadata:
   dispatcher-layer: orchestration
   dispatcher-lifecycle: active
@@ -17,7 +18,7 @@ metadata:
 
 # Test Lifecycle Skill
 
-> **Author:** jovd83 | **Version:** 1.0.0
+> **Author:** jovd83 | **Version:** 1.1.0
 
 Orchestrate a software change through 13 phases of disciplined testing — from intake through to a signed-off final report — by dispatching to phase-specific skills and pausing at HITL (human-in-the-loop) gates for explicit approval.
 
@@ -60,6 +61,27 @@ Phase → intent mapping (full table in [references/phase-map.md](references/pha
 | 11 Functional Review | `review_automation_quality` | `automated-test-reviewer` |
 | 12 Heal Loop | (inline — orchestrator decides) | n/a |
 | 13 Final Report | (inline — orchestrator compiles) | n/a |
+
+## Chain Phases
+
+`config/chain_definition.json` is the executable contract: 14 phases, run by `skill-orchestrator/scripts/next_phase.py`. In Claude Code, run the whole chain with the **`test-lifecycle`** agent (`~/.claude/agents/test-lifecycle.md`). It stops at each approval gate and returns, and the main conversation resumes it. This SKILL.md stays the reference for the phases and for manual runs in other harnesses.
+
+| # | Phase | Skill | Gate | Lifecycle phase |
+|---|---|---|---|---|
+| 1 | `intake` | agent-handled |  | 1 Intake |
+| 2 | `hitl_design` | `eu-ai-act-hitl-oversight-skill` |  | 1b HITL controls design |
+| 3 | `ac_normalization` | `acceptance-criteria-designer` |  | 2 AC normalization |
+| 4 | `test_analysis` | `test-analysis-skill` |  | 3 Test analysis |
+| 5 | `test_strategy` | `test-strategy-skill` | **approval gate after** | 4 Test strategy |
+| 6 | `test_design` | `test-design-orchestrator` |  | 5 Test design |
+| 7 | `case_quality_gate` | `test-case-reviewer` |  | 6 Case quality gate |
+| 8 | `test_data_prep` | `lifelike-synthetic-data-generator` |  | 7 Test data |
+| 9 | `artifact_export` | `test-management-sync` | **approval gate after** | 8 Artifact export |
+| 10 | `automation_lanes` | agent-handled |  | 9a Automation lanes (+ 10 execution) |
+| 11 | `manual_track` | agent-handled |  | 9b Manual track |
+| 12 | `functional_review` | `automated-test-reviewer` |  | 11 Functional review |
+| 13 | `heal_loop` | agent-handled | **approval gate after** | 12 Heal loop |
+| 14 | `final_report` | agent-handled | **approval gate after** | 13 Final report |
 
 ## Inputs To Confirm Or Infer
 

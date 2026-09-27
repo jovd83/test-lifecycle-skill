@@ -4,6 +4,12 @@ All notable changes to the `test-lifecycle-skill` repository are documented in t
 
 The format follows Keep a Changelog with lightweight `Added`, `Changed`, and `Fixed` sections.
 
+## [1.1.0] - 2026-09-27
+
+### Changed
+- `disable-model-invocation: true`: the chain runs as a Claude Code agent (`test-lifecycle`) instead of being picked from its description.
+- New "Chain Phases" section, generated from `config/chain_definition.json`: engine phase, skill, gate, and the matching step of this SKILL.md's workflow.
+
 ## [1.0.0] - 2026-05-25
 
 ### Added
