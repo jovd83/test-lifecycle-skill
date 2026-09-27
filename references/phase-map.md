@@ -22,7 +22,7 @@ full     : [1, 1b, 2, 3, 4]  →  gate 4  →  [5, 6, 7, 8]  →  gate 8  →  [
 | 3 | Test Analysis | `analyze_requirements_for_testability` | `test-analysis-skill` | never | no |
 | 4 | Test Strategy | `design_test_strategy` | `test-strategy-skill` | never | **standard, full** |
 | 5 | Test Design | `generate_structured_test_cases` | `test-design-orchestrator` | never | no |
-| 6 | Case Quality Gate | `review_test_cases` | `tss-test-case-reviewer` | never | inline mini-loop only |
+| 6 | Case Quality Gate | `review_test_cases` | `test-case-reviewer` | never | inline mini-loop only |
 | 7 | Test Data Prep | `generate_synthetic_data` | `lifelike-synthetic-data-generator` | `strategy.json.test_data.synthetic_required == false` | no |
 | 8 | Artifact Export | `render_test_artifact` | `test-artifact-export-skill` | never | **standard, full** |
 | 9a | Automation Lanes | per-lane intent | per-lane skill | per lane, if no scenarios route to it | **full only, per lane on Critical** |
@@ -82,7 +82,7 @@ full     : [1, 1b, 2, 3, 4]  →  gate 4  →  [5, 6, 7, 8]  →  gate 8  →  [
 ### 6. Case Quality Gate
 
 **Intent:** `review_test_cases`
-**Dispatches to:** `tss-test-case-reviewer`
+**Dispatches to:** `test-case-reviewer`
 **Inputs:** all designed cases from phase 5.
 **Outputs:** `phase-06-quality/review.md`.
 **Mini-loop:** if a case fails review, route ONLY that case back to phase 5 (no HITL gate). Max 2 rewrites per case before escalating in the case-quality report.

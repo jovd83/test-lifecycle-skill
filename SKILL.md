@@ -51,7 +51,7 @@ Phase → intent mapping (full table in [references/phase-map.md](references/pha
 | 3 Test Analysis | `analyze_requirements_for_testability` | `test-analysis-skill` |
 | 4 Test Strategy | `design_test_strategy` | `test-strategy-skill` |
 | 5 Test Design | `generate_structured_test_cases` | `test-design-orchestrator` |
-| 6 Case Quality Gate | `review_test_cases` | `tss-test-case-reviewer` |
+| 6 Case Quality Gate | `review_test_cases` | `test-case-reviewer` |
 | 7 Test Data (skip-if not needed) | `generate_synthetic_data` | `lifelike-synthetic-data-generator` |
 | 8 Artifact Export | `render_test_artifact` | `test-artifact-export-skill` |
 | 9a Automation lanes | per lane intent (from phase-4 strategy.lanes) | per lane (e.g. `playwright-skill`) |

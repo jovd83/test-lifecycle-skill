@@ -93,7 +93,7 @@
       "name": "Case Quality Gate",
       "inline": false,
       "intent": "review_test_cases",
-      "default_skill": "tss-test-case-reviewer",
+      "default_skill": "test-case-reviewer",
       "skip_condition": null,
       "parallel_with": null,
       "inputs": ["phase-05-design/cases/"],
