@@ -38,7 +38,7 @@ Orchestrate a software change through 13 phases of disciplined testing — from 
 - Do not silently drop a manual-track item from the strategy's routing — phase 9b runs even if all manual cases are marked optional.
 - Do not modify the strategy document mid-run. If a fix needs the strategy changed (e.g., a new scenario surfaces), pause at the phase-12 gate.
 - Do not run end-to-end on production environments without the explicit env target coming from phase-4 strategy.
-- Do not create persistent shared-memory behavior. Per-run state lives in the workspace; project-wide policy belongs in an external shared-memory skill.
+- Do not create persistent shared-memory behavior. Per-run state lives in the workspace; project-wide policy belongs in the agent's own memory (for example CLAUDE.md or AGENTS.md).
 
 ## Phase Map
 
@@ -290,7 +290,7 @@ Template in [assets/final-report-template.md](assets/final-report-template.md). 
 
 - **Runtime memory**: phase outputs, scratch notes, in-progress lane results. Lives in the run workspace; not promoted.
 - **Project-local memory**: the per-run workspace itself (`<project>/.test-lifecycle/run-<ts>/`). Version-controllable if the team wants.
-- **Shared memory**: out of scope. Cross-project policy (e.g., "team always prefers Playwright") belongs behind an external shared-memory skill.
+- **Shared memory**: out of scope. Cross-project policy (e.g., "team always prefers Playwright") belongs in the agent's own memory (for example CLAUDE.md or AGENTS.md).
 
 Do not auto-promote findings into persistent storage. The final report is the durable artifact.
 
